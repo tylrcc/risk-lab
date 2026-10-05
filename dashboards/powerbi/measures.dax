@@ -1,0 +1,50 @@
+// Measures for the scored_loans table. Each line is a standalone measure.
+
+Loans = COUNTROWS ( scored_loans )
+
+Defaults = CALCULATE ( COUNTROWS ( scored_loans ), scored_loans[actual_default] = 1 )
+
+Default Rate = DIVIDE ( [Defaults], [Loans] )
+
+Average PD = AVERAGE ( scored_loans[pd] )
+
+Approved Loans = CALCULATE ( COUNTROWS ( scored_loans ), scored_loans[decision] = "approve" )
+
+Approval Rate = DIVIDE ( [Approved Loans], [Loans] )
+
+Default Rate Approved =
+    CALCULATE ( [Default Rate], scored_loans[decision] = "approve" )
+
+Default Rate Declined =
+    CALCULATE ( [Default Rate], scored_loans[decision] = "decline" )
+
+Defaults Caught =
+    CALCULATE ( COUNTROWS ( scored_loans ), scored_loans[decision] = "decline", scored_loans[actual_default] = 1 )
+
+Recall = DIVIDE ( [Defaults Caught], [Defaults] )
+
+Precision =
+    DIVIDE ( [Defaults Caught], CALCULATE ( COUNTROWS ( scored_loans ), scored_loans[decision] = "decline" ) )
+
+Calibration Gap = [Average PD] - [Default Rate]
+
+// Measures for the metrics table (one row per model). Pick the best model by AUC.
+
+Best AUC = MAX ( metrics[auc] )
+
+Best Model =
+    CALCULATE ( SELECTEDVALUE ( metrics[model] ), TOPN ( 1, metrics, metrics[auc], DESC ) )
+
+Gini = 2 * [Best AUC] - 1
+
+// Measures for the portfolio returns table.
+
+Last Cumulative =
+    CALCULATE ( MAX ( returns[cumulative] ), LASTDATE ( returns[date] ) )
+
+Max Drawdown = MIN ( returns[drawdown] )
+
+Latest VaR 95 =
+    CALCULATE ( MAX ( returns[rolling_var_95] ), LASTDATE ( returns[date] ) )
+
+Annualised Vol = STDEV.S ( returns[return] ) * SQRT ( 252 )
